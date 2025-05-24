@@ -1,1 +1,3 @@
 # slack-vitals
+
+My personal slack bot to keep track of my Algorithmic trading servers uptime, storage etc...
