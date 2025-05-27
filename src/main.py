@@ -8,6 +8,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 slack_token = os.getenv("SLACKTOKEN")
@@ -28,13 +29,35 @@ def in_between(number, lowerbound, upperbound):
     return lowerbound <= number <= upperbound
 
 
+# ethernet check
+def ethernet_grab(interface = "eth0"):
+    stats = psutil.net_if_stats()
+    if interface in stats:
+        return stats[interface].isup
+    return False
+
+interface_name = "eth0"
+
+def ethernet_check(interval=60):
+    try:
+        while True:
+            if ethernet_grab(interface_name):
+                print(f"ethernet connection: {interface_name}")
+            else:
+                send_slack_message(f"ethernet connection not successful")
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        print("job stopped")
+
+
+# cpu check
 def cpu_temp_check(interval=60):
     try:
         while True:
             temps = psutil.sensors_temperatures()
             if "coretemp" in temps and temps["coretemp"]:
                 cpu_temp = temps["coretemp"][0].current
-                if in_between(cpu_temp, 60, 75):
+                if in_between(cpu_temp, 1, 75):
                     print("CPU temp normal")
                     print(cpu_temp)
                 else:
@@ -88,11 +111,14 @@ if __name__ == "__main__":
                                    kwargs={"interval": 60})
     cpu_temp_thread = threading.Thread(target=cpu_temp_check,
                                        kwargs={"interval": 60})
+    ethernet_connec_thread = threading.Thread(target=ethernet_check, kwargs={"interval": 60})
 
     cpu_thread.start()
     cpu_temp_thread.start()
     disk_thread.start()
+    ethernet_connec_thread.start()
 
     cpu_thread.join()
     cpu_temp_thread.join()
     disk_thread.join()
+    ethernet_connec_thread.join()
